@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guess the JS Code</title>
+    <!-- Tailwind CSS for Layout and Responsiveness -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Pixel Font to fit the theme -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --mc-dirt: #7B5230;
+            --mc-dirt-dark: #5A3A21;
+            --mc-grass: #4C9E38;
+            --mc-grass-top: #62B84D;
+            --mc-stone: #7D7D7D;
+            --mc-stone-light: #9E9E9E;
+            --mc-stone-dark: #555555;
+            --mc-text: #FFFFFF;
+            --mc-shadow: #333333;
+            --mc-blue: #3A89C9;
+        }
+
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #1a1a1a;
+            background-image: 
+                linear-gradient(45deg, #222 25%, transparent 25%, transparent 75%, #222 75%, #222), 
+                linear-gradient(45deg, #222 25%, transparent 25%, transparent 75%, #222 75%, #222);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: var(--mc-text);
+            user-select: none;
+        }
+
+        /* 16:9 Aspect Ratio Container */
+        .game-container {
+            width: 100%;
+            max-width: 1200px;
+            aspect-ratio: 16 / 9;
+            background-color: #5C94FC; /* Sky Blue */
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            border: 8px solid var(--mc-stone-dark);
+            image-rendering: pixelated;
+        }
+
+        /* Minecraft Button Styling */
+        .mc-btn {
+            background-color: var(--mc-stone-light);
+            border: 4px solid #000;
+            border-top-color: #FFFFFF;
+            border-left-color: #FFFFFF;
+            border-bottom-color: var(--mc-stone-dark);
+            border-right-color: var(--mc-stone-dark);
+            color: #333;
+            padding: 12px 24px;
+            text-align: center;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 14px;
+            transition: transform 0.1s;
+        }
+
+        .mc-btn:hover {
+            background-color: #B0B0B0;
+        }
+
+        .mc-btn:active {
+            border-top-color: var(--mc-stone-dark);
+            border-left-color: var(--mc-stone-dark);
+            border-bottom-color: #FFFFFF;
+            border-right-color: #FFFFFF;
+            background-color: var(--mc-stone);
+        }
+
+        /* Distinct Difficulty Buttons */
+        .mc-btn-easy { background-color: var(--mc-grass); color: white; border-top-color: #92e87a; border-left-color: #92e87a; border-bottom-color: #2b5e1e; border-right-color: #2b5e1e; }
+        .mc-btn-easy:hover { background-color: #5ab545; }
+        .mc-btn-medium { background-color: #E2A01D; color: white; border-top-color: #ffcc5c; border-left-color: #ffcc5c; border-bottom-color: #8c600b; border-right-color: #8c600b;}
+        .mc-btn-medium:hover { background-color: #f5b027; }
+        .mc-btn-hard { background-color: #C13A3A; color: white; border-top-color: #f06a6a; border-left-color: #f06a6a; border-bottom-color: #731e1e; border-right-color: #731e1e;}
+        .mc-btn-hard:hover { background-color: #d64949; }
+
+        /* Panel Styling */
+        .mc-panel {
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 4px solid var(--mc-stone-light);
+            border-radius: 2px;
+            padding: 20px;
+        }
+
+        .code-block {
+            background-color: #1E1E1E;
+            color: #D4D4D4;
+            padding: 15px;
+            border-left: 5px solid var(--mc-grass);
+            font-family: monospace;
+            font-size: 16px;
+            text-align: left;
+            margin: 15px 0;
+            line-height: 1.5;
+        }
+        
+        .code-keyword { color: #569CD6; }
+        .code-string { color: #CE9178; }
+        .code-number { color: #B5CEA8; }
+        .code-comment { color: #6A9955; }
+
+        .xp-bar-container {
+            width: 100%;
+            height: 20px;
+            background-color: #333;
+            border: 2px solid #000;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        .xp-bar-fill {
+            height: 100%;
+            background-color: #38F800; /* XP Green */
+            width: 0%;
+            transition: width 0.5s ease-out;
+            border-top: 2px solid #8BFC6B;
+        }
+
+        /* Scenery */
+        .ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 20%;
+            background-color: var(--mc-dirt);
+            border-top: 15px solid var(--mc-grass);
+            z-index: 1; /* Updated to layer above clouds */
+        }
+
+        /* Clouds */
+        .clouds {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 80%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .cloud {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.85);
+            animation: moveCloud linear infinite;
+        }
+
+        /* Blocky Minecraft cloud shapes using box-shadow */
+        .cloud-1 {
+            width: 120px; height: 30px;
+            top: 15%;
+            animation-duration: 45s;
+            box-shadow: -20px 20px 0 0 rgba(255,255,255,0.85), 30px -15px 0 0 rgba(255,255,255,0.85), 60px 10px 0 0 rgba(255,255,255,0.85);
+        }
+        
+        .cloud-2 {
+            width: 90px; height: 25px;
+            top: 35%;
+            animation-duration: 60s;
+            animation-delay: -15s;
+            box-shadow: 20px 15px 0 0 rgba(255,255,255,0.85), -30px 10px 0 0 rgba(255,255,255,0.85);
+        }
+        
+        .cloud-3 {
+            width: 150px; height: 35px;
+            top: 55%;
+            animation-duration: 80s;
+            animation-delay: -40s;
+            box-shadow: 40px -15px 0 0 rgba(255,255,255,0.85), -40px 15px 0 0 rgba(255,255,255,0.85), 80px 10px 0 0 rgba(255,255,255,0.85);
+        }
+
+        .cloud-4 {
+            width: 100px; height: 30px;
+            top: 25%;
+            animation-duration: 50s;
+            animation-delay: -30s;
+            box-shadow: 30px 15px 0 0 rgba(255,255,255,0.85), -20px -10px 0 0 rgba(255,255,255,0.85);
+        }
+
+        @keyframes moveCloud {
+            0% { left: 100%; }
+            100% { left: -50%; }
+        }
+
+        /* Animations */
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            50% { transform: translateX(10px); }
+            75% { transform: translateX(-10px); }
+            100% { transform: translateX(0); }
+        }
+        .shake { animation: shake 0.4s; }
+
+        @keyframes popup {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .popup { animation: popup 0.3s forwards; }
+
+        @keyframes floatXP {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-50px); opacity: 0; }
+        }
+        .xp-float {
+            position: absolute;
+            color: #38F800;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px #000;
+            animation: floatXP 1s forwards;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        /* Responsive text adjustments */
+        @media (max-width: 768px) {
+            body { font-size: 10px; }
+            .mc-btn { font-size: 10px; padding: 10px 15px; }
+            .code-block { font-size: 12px; }
+            h1 { font-size: 18px !important; }
+            h2 { font-size: 14px !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container flex flex-col relative" id="game-container">
+        
+        <!-- Background Scenery -->
+        <div class="clouds">
+            <div class="cloud cloud-1"></div>
+            <div class="cloud cloud-2"></div>
+            <div class="cloud cloud-3"></div>
+            <div class="cloud cloud-4"></div>
+        </div>
+        <div class="ground"></div>
+
+        <!-- Header / HUD (Hidden on main menu) -->
+        <div id="hud" class="hidden absolute top-0 left-0 w-full p-4 flex justify-between items-start z-20">
+            <div class="flex flex-col">
+                <div class="text-yellow-400 drop-shadow-[2px_2px_0_rgba(0,0,0,1)] text-sm md:text-lg">Level: <span id="hud-level">Easy</span></div>
+                <div class="text-green-400 drop-shadow-[2px_2px_0_rgba(0,0,0,1)] mt-2 text-sm md:text-lg">XP: <span id="hud-score">0</span></div>
+            </div>
+            <button id="music-toggle" class="mc-btn !p-2" title="Toggle Music">
+                🔊
+            </button>
+        </div>
+
+        <!-- Screen: Main Menu -->
+        <div id="screen-menu" class="absolute inset-0 flex flex-col items-center justify-center z-10 p-4">
+            <div class="mc-panel text-center max-w-2xl w-full">
+                <h1 class="text-2xl md:text-4xl text-yellow-300 mb-2 drop-shadow-[3px_3px_0_rgba(0,0,0,1)] leading-relaxed">GUESS THE JS CODE</h1>
+                <p class="text-gray-300 text-xs md:text-sm mb-8 leading-loose">Master JavaScript Variables!<br>Earn XP by choosing the correct code block.</p>
+                
+                <h2 class="text-white mb-4 text-sm md:text-base">Select Difficulty:</h2>
+                <div class="flex flex-col md:flex-row gap-4 justify-center">
+                    <button class="mc-btn mc-btn-easy flex-1" onclick="startGame('easy')">EASY<br><span class="text-[8px] text-gray-200 mt-1 block">Basic Declarations</span></button>
+                    <button class="mc-btn mc-btn-medium flex-1" onclick="startGame('medium')">MEDIUM<br><span class="text-[8px] text-gray-200 mt-1 block">Naming & Types</span></button>
+                    <button class="mc-btn mc-btn-hard flex-1" onclick="startGame('hard')">HARD<br><span class="text-[8px] text-gray-200 mt-1 block">Scope & Output</span></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen: Game -->
+        <div id="screen-game" class="hidden absolute inset-0 flex flex-col items-center justify-center z-10 p-4 md:p-8 mt-10">
+            <div class="mc-panel w-full max-w-3xl flex flex-col items-center popup" id="question-panel">
+                
+                <!-- Progress -->
+                <div class="w-full text-left text-xs text-gray-400 mb-2">Question <span id="q-current">1</span>/<span id="q-total">5</span></div>
+                
+                <!-- Question Text -->
+                <div id="question-text" class="text-white text-sm md:text-lg leading-relaxed text-center w-full">
+                    Question text goes here?
+                </div>
+
+                <!-- Code Snippet Area -->
+                <div id="code-snippet-container" class="w-full hidden">
+                    <div id="code-snippet" class="code-block w-full"></div>
+                </div>
+
+                <!-- Answers Grid -->
+                <div id="answers-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 w-full">
+                    <!-- Buttons injected via JS -->
+                </div>
+
+                <!-- XP Bar -->
+                <div class="w-full mt-6">
+                    <div class="text-[10px] text-gray-300 text-center mb-1">Level Progress</div>
+                    <div class="xp-bar-container">
+                        <div id="xp-bar" class="xp-bar-fill"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen: Feedback Overlay -->
+        <div id="screen-feedback" class="hidden absolute inset-0 bg-black/60 z-30 flex items-center justify-center">
+            <div id="feedback-box" class="mc-panel text-center">
+                <h2 id="feedback-title" class="text-2xl md:text-4xl mb-4">CORRECT!</h2>
+                <p id="feedback-text" class="text-white text-sm md:text-base mb-6">You earned +20 XP</p>
+                <button class="mc-btn" onclick="nextQuestion()">Continue</button>
+            </div>
+        </div>
+
+        <!-- Screen: End Level -->
+        <div id="screen-end" class="hidden absolute inset-0 flex flex-col items-center justify-center z-10 p-4 bg-black/80">
+            <div class="mc-panel text-center max-w-md w-full popup">
+                <h1 class="text-2xl md:text-3xl text-yellow-300 mb-4 drop-shadow-[3px_3px_0_rgba(0,0,0,1)]">LEVEL COMPLETE!</h1>
+                <p class="text-white text-sm md:text-base mb-2">Total XP Earned:</p>
+                <p id="final-score" class="text-green-400 text-3xl md:text-4xl mb-6 drop-shadow-[2px_2px_0_rgba(0,0,0,1)]">0</p>
+                
+                <div class="flex flex-col gap-4">
+                    <button class="mc-btn" onclick="returnToMenu()">Main Menu</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- DATA: Questions Database ---
+        const questionsDB = {
+            easy: [
+                {
+                    q: "We need a variable for the player's health that will change when they take damage. Which is correct?",
+                    code: null,
+                    answers: [
+                        { text: "let health = 100;", correct: true },
+                        { text: "const health = 100;", correct: false },
+                        { text: "var 1health = 100;", correct: false },
+                        { text: "make health = 100;", correct: false }
+                    ]
+                },
+                {
+                    q: "We need to store the maximum number of players allowed. This number will NEVER change.",
+                    code: null,
+                    answers: [
+                        { text: "let max_players = 20;", correct: false },
+                        { text: "const MAX_PLAYERS = 20;", correct: true },
+                        { text: "var players = '20';", correct: false },
+                        { text: "fixed MAX = 20;", correct: false }
+                    ]
+                },
+                {
+                    q: "Which keyword is considered the 'old way' to declare variables in JavaScript before let and const?",
+                    code: null,
+                    answers: [
+                        { text: "var", correct: true },
+                        { text: "let", correct: false },
+                        { text: "static", correct: false },
+                        { text: "const", correct: false }
+                    ]
+                },
+                {
+                    q: "Fill in the blank to create a variable that can be updated:\n___ itemName = 'Diamond Sword';",
+                    code: null,
+                    answers: [
+                        { text: "const", correct: false },
+                        { text: "string", correct: false },
+                        { text: "let", correct: true },
+                        { text: "set", correct: false }
+                    ]
+                },
+                {
+                    q: "What symbol is used to ASSIGN a value to a variable?",
+                    code: null,
+                    answers: [
+                        { text: "==", correct: false },
+                        { text: "=>", correct: false },
+                        { text: "-", correct: false },
+                        { text: "=", correct: true }
+                    ]
+                }
+            ],
+            medium: [
+                {
+                    q: "Which of these is a VALID variable name in JavaScript?",
+                    code: null,
+                    answers: [
+                        { text: "1stPlayer", correct: false },
+                        { text: "player score", correct: false },
+                        { text: "playerScore", correct: true },
+                        { text: "let", correct: false }
+                    ]
+                },
+                {
+                    q: "What is the data type of this variable?",
+                    code: "<span class='code-keyword'>let</span> isNightTime = <span class='code-keyword'>true</span>;",
+                    answers: [
+                        { text: "boolean", correct: true },
+                        { text: "string", correct: false },
+                        { text: "number", correct: false },
+                        { text: "text", correct: false }
+                    ]
+                },
+                {
+                    q: "Look at the code below. What is the final value of blocks?",
+                    code: "<span class='code-keyword'>let</span> blocks = <span class='code-number'>5</span>;\nblocks = blocks + <span class='code-number'>2</span>;",
+                    answers: [
+                        { text: "5", correct: false },
+                        { text: "7", correct: true },
+                        { text: "Error", correct: false },
+                        { text: "52", correct: false }
+                    ]
+                },
+                {
+                    q: "What happens when this code runs?",
+                    code: "<span class='code-keyword'>const</span> gravity = <span class='code-number'>9.8</span>;\ngravity = <span class='code-number'>10</span>;",
+                    answers: [
+                        { text: "gravity becomes 10", correct: false },
+                        { text: "gravity becomes 0", correct: false },
+                        { text: "An Error Occurs", correct: true },
+                        { text: "Nothing happens", correct: false }
+                    ]
+                },
+                {
+                    q: "If a variable is declared but given no value, what is its data type?",
+                    code: "<span class='code-keyword'>let</span> inventory;\nconsole.log(inventory);",
+                    answers: [
+                        { text: "null", correct: false },
+                        { text: "0", correct: false },
+                        { text: "undefined", correct: true },
+                        { text: "empty", correct: false }
+                    ]
+                }
+            ],
+            hard: [
+                {
+                    q: "What does this code log to the console?",
+                    code: "<span class='code-keyword'>let</span> wood = <span class='code-string'>\"Oak\"</span>;\nconsole.log(<span class='code-keyword'>typeof</span> wood);",
+                    answers: [
+                        { text: "\"Oak\"", correct: false },
+                        { text: "\"string\"", correct: true },
+                        { text: "\"text\"", correct: false },
+                        { text: "\"object\"", correct: false }
+                    ]
+                },
+                {
+                    q: "Predict the output of this scoped block of code:",
+                    code: "<span class='code-keyword'>let</span> x = <span class='code-number'>10</span>;\n{\n  <span class='code-keyword'>let</span> x = <span class='code-number'>5</span>;\n}\nconsole.log(x);",
+                    answers: [
+                        { text: "10", correct: true },
+                        { text: "5", correct: false },
+                        { text: "undefined", correct: false },
+                        { text: "Error", correct: false }
+                    ]
+                },
+                {
+                    q: "Which naming convention is the standard best practice for JavaScript variables?",
+                    code: null,
+                    answers: [
+                        { text: "snake_case", correct: false },
+                        { text: "PascalCase", correct: false },
+                        { text: "kebab-case", correct: false },
+                        { text: "camelCase", correct: true }
+                    ]
+                },
+                {
+                    q: "What is the result of adding a string and a number in JS?",
+                    code: "<span class='code-keyword'>let</span> result = <span class='code-string'>\"Score: \"</span> + <span class='code-number'>50</span>;",
+                    answers: [
+                        { text: "Error", correct: false },
+                        { text: "Score: 50", correct: true },
+                        { text: "50Score:", correct: false },
+                        { text: "undefined", correct: false }
+                    ]
+                },
+                {
+                    q: "What happens if you use a variable declared with 'let' before the line it is declared on?",
+                    code: "console.log(hero);\n<span class='code-keyword'>let</span> hero = <span class='code-string'>\"Steve\"</span>;",
+                    answers: [
+                        { text: "Logs 'Steve'", correct: false },
+                        { text: "Logs 'undefined'", correct: false },
+                        { text: "ReferenceError", correct: true },
+                        { text: "Logs 'null'", correct: false }
+                    ]
+                }
+            ]
+        };
+
+        // --- GAME STATE ---
+        let currentLevel = '';
+        let currentQuestions = [];
+        let currentQIndex = 0;
+        let score = 0;
+        let xpPerQuestion = 20;
+
+        // --- AUDIO ENGINE (Web Audio API Synth) ---
+        class ChiptuneAudio {
+            constructor() {
+                this.ctx = null;
+                this.isPlaying = false;
+                this.intervalId = null;
+                this.notes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63]; // C E G C G E
+                this.noteIndex = 0;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if(this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggleMusic() {
+                this.init();
+                if (this.isPlaying) {
+                    this.stopMusic();
+                    document.getElementById('music-toggle').innerText = '🔇';
+                } else {
+                    this.playMusic();
+                    document.getElementById('music-toggle').innerText = '🔊';
+                }
+            }
+
+            playMusic() {
+                this.isPlaying = true;
+                this.noteIndex = 0;
+                this.intervalId = setInterval(() => this.playNote(this.notes[this.noteIndex], 0.15, 'square', 0.05), 250);
+            }
+
+            stopMusic() {
+                this.isPlaying = false;
+                if (this.intervalId) clearInterval(this.intervalId);
+            }
+
+            playNote(freq, duration, type='square', volume=0.1) {
+                if (!this.ctx || !this.isPlaying && type === 'square') return; // Only block BGM if paused
+                if (!this.ctx) this.init();
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                
+                gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+
+                if (type === 'square') { // Step sequencer for BGM
+                    this.noteIndex = (this.noteIndex + 1) % this.notes.length;
+                }
+            }
+
+            playCorrect() {
+                this.init();
+                this.playNote(440, 0.1, 'sine', 0.3); // A4
+                setTimeout(() => this.playNote(659.25, 0.2, 'sine', 0.3), 100); // E5
+            }
+
+            playWrong() {
+                this.init();
+                this.playNote(150, 0.3, 'sawtooth', 0.3);
+                setTimeout(() => this.playNote(100, 0.4, 'sawtooth', 0.3), 150);
+            }
+        }
+
+        const audio = new ChiptuneAudio();
+
+        // UI Listeners
+        document.getElementById('music-toggle').addEventListener('click', () => {
+            audio.toggleMusic();
+        });
+
+        // --- GAME LOGIC ---
+
+        function showScreen(screenId) {
+            ['screen-menu', 'screen-game', 'screen-feedback', 'screen-end'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        function startGame(level) {
+            // Initialize Audio context on first user interaction
+            audio.init();
+            if (!audio.isPlaying && document.getElementById('music-toggle').innerText === '🔊') {
+                audio.playMusic();
+            }
+
+            currentLevel = level;
+            currentQuestions = [...questionsDB[level]];
+            
+            // Shuffle questions and their answers
+            currentQuestions.sort(() => Math.random() - 0.5);
+            currentQuestions.forEach(q => q.answers.sort(() => Math.random() - 0.5));
+
+            currentQIndex = 0;
+            score = 0;
+            
+            document.getElementById('hud').classList.remove('hidden');
+            document.getElementById('hud-level').innerText = level.charAt(0).toUpperCase() + level.slice(1);
+            updateHUD();
+            
+            showScreen('screen-game');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const qData = currentQuestions[currentQIndex];
+            
+            // Update Progress texts
+            document.getElementById('q-current').innerText = currentQIndex + 1;
+            document.getElementById('q-total').innerText = currentQuestions.length;
+            
+            // Re-trigger animation
+            const panel = document.getElementById('question-panel');
+            panel.classList.remove('popup');
+            void panel.offsetWidth; // trigger reflow
+            panel.classList.add('popup');
+
+            // Set content
+            document.getElementById('question-text').innerText = qData.q;
+            
+            const codeContainer = document.getElementById('code-snippet-container');
+            const codeBlock = document.getElementById('code-snippet');
+            if (qData.code) {
+                codeBlock.innerHTML = qData.code;
+                codeContainer.classList.remove('hidden');
+            } else {
+                codeContainer.classList.add('hidden');
+            }
+
+            // Build answers
+            const grid = document.getElementById('answers-grid');
+            grid.innerHTML = '';
+            qData.answers.forEach((ans) => {
+                const btn = document.createElement('button');
+                btn.className = 'mc-btn w-full text-left md:text-center normal-case font-mono text-[10px] md:text-xs overflow-hidden text-ellipsis';
+                // Escape HTML for safety in text
+                btn.innerText = ans.text;
+                btn.onclick = () => checkAnswer(ans.correct, btn);
+                grid.appendChild(btn);
+            });
+
+            updateProgressBar();
+        }
+
+        function checkAnswer(isCorrect, btnElement) {
+            const panel = document.getElementById('question-panel');
+            const feedbackTitle = document.getElementById('feedback-title');
+            const feedbackText = document.getElementById('feedback-text');
+
+            if (isCorrect) {
+                audio.playCorrect();
+                score += xpPerQuestion;
+                updateHUD();
+                
+                // Floating XP Animation
+                createFloatingXP(btnElement);
+
+                feedbackTitle.innerText = "CORRECT!";
+                feedbackTitle.className = "text-2xl md:text-4xl mb-4 text-green-400 drop-shadow-[2px_2px_0_rgba(0,0,0,1)]";
+                feedbackText.innerText = `You gained +${xpPerQuestion} XP!`;
+            } else {
+                audio.playWrong();
+                panel.classList.add('shake');
+                setTimeout(() => panel.classList.remove('shake'), 400);
+
+                feedbackTitle.innerText = "INCORRECT!";
+                feedbackTitle.className = "text-2xl md:text-4xl mb-4 text-red-500 drop-shadow-[2px_2px_0_rgba(0,0,0,1)]";
+                
+                // Find correct answer to show user
+                const correctAns = currentQuestions[currentQIndex].answers.find(a => a.correct).text;
+                feedbackText.innerText = `The correct answer was:\n\n${correctAns}`;
+            }
+
+            setTimeout(() => {
+                showScreen('screen-feedback');
+            }, isCorrect ? 600 : 400); // slight delay for visual processing
+        }
+
+        function createFloatingXP(targetEl) {
+            const rect = targetEl.getBoundingClientRect();
+            const container = document.getElementById('game-container').getBoundingClientRect();
+            
+            const xp = document.createElement('div');
+            xp.className = 'xp-float';
+            xp.innerText = `+${xpPerQuestion} XP`;
+            
+            // Position relative to game container
+            xp.style.left = `${rect.left - container.left + (rect.width/2) - 30}px`;
+            xp.style.top = `${rect.top - container.top}px`;
+            
+            document.getElementById('game-container').appendChild(xp);
+            
+            setTimeout(() => {
+                xp.remove();
+            }, 1000);
+        }
+
+        function nextQuestion() {
+            currentQIndex++;
+            if (currentQIndex < currentQuestions.length) {
+                showScreen('screen-game');
+                loadQuestion();
+            } else {
+                endLevel();
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById('hud-score').innerText = score;
+        }
+
+        function updateProgressBar() {
+            const percentage = (currentQIndex / currentQuestions.length) * 100;
+            document.getElementById('xp-bar').style.width = `${percentage}%`;
+        }
+
+        function endLevel() {
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('final-score').innerText = score;
+            showScreen('screen-end');
+            
+            // End fanfare
+            audio.playCorrect();
+            setTimeout(() => audio.playCorrect(), 200);
+            setTimeout(() => audio.playCorrect(), 400);
+        }
+
+        function returnToMenu() {
+            document.getElementById('xp-bar').style.width = `0%`;
+            showScreen('screen-menu');
+        }
+
+    </script>
+</body>
+</html>
